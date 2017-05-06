@@ -13,6 +13,28 @@ USAGE = (
     "%s" % HELP_BLURB
 )
 
+class BaseNWSArgument(object):
+    def __init__(self, name, documentation, action=None):
+        self._name = name
+        self._documentation = documentation
+        self._action = action
+
+    def add_to_arg_table(self, argument_table):
+        argument_table[self.arg_name] = self
+
+    @property
+    def arg_name(self):
+        return '--' + self._name
+
+    @property
+    def documentation(self):
+        return self._documentation
+
+    def add_to_parser(self, parser):
+        parser.add_argument(self.arg_name,
+                            help=self.documentation,
+                            action=self._action)
+
 
 class CommandAction(argparse.Action):
     """Custom action for CLI command arguments
@@ -45,11 +67,22 @@ class CommandAction(argparse.Action):
 class NWSArgParser(argparse.ArgumentParser):
     def __init__(self):
         super(NWSArgParser, self).__init__(
-            add_help=False,
-            usage=USAGE)
+            # add_help=False,
+            # usage=USAGE
+            )
         self._build()
 
     def _build(self):
+        # global arguments
+        argument_table = {}
+        # example: add one global arg
+        arg1 = BaseNWSArgument(name='debug',documentation='print debug info',action='store_true')
+        arg1.add_to_arg_table(argument_table)
+
+        for argument_name in argument_table:
+            argument = argument_table[argument_name]
+            argument.add_to_parser(self)
+
         command_table = {'cmd1': 'asdf', 'cmd2': 'asdfasdf'}
 
         self.add_argument('command', action=CommandAction,
