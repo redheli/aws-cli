@@ -64,6 +64,24 @@ class CommandAction(argparse.Action):
         # NOOP if argparse.Action tries to set this value.
         pass
 
+class NWSCommand(object):
+    @property
+    def name(self):
+        # Subclasses must implement a name.
+        raise NotImplementedError("name")
+
+class NWSDownloadCommand1(NWSCommand):
+    def __call__(self, args, parsed_globals):
+        print 'NWSDownloadCommand1'
+        print args
+        print parsed_globals
+
+class NWSDownloadCommand2(NWSCommand):
+    def __call__(self, args, parsed_globals):
+        print 'NWSDownloadCommand2'
+        print args
+        print parsed_globals
+
 class NWSArgParser(argparse.ArgumentParser):
     def __init__(self):
         super(NWSArgParser, self).__init__(
@@ -83,13 +101,27 @@ class NWSArgParser(argparse.ArgumentParser):
             argument = argument_table[argument_name]
             argument.add_to_parser(self)
 
-        command_table = {'cmd1': 'asdf', 'cmd2': 'asdfasdf'}
+        command_table = {'cmd1': NWSDownloadCommand1(), 'cmd2': NWSDownloadCommand2() }
 
         self.add_argument('command', action=CommandAction,
                                command_table=command_table)
 
-        namespace = self.parse_args()
-        print namespace
+        parsed_args = self.parse_args()
+        print parsed_args
+
+        try:
+            # Because _handle_top_level_args emits events, it's possible
+            # that exceptions can be raised, which should have the same
+            # general exception handling logic as calling into the
+            # command table.  This is why it's in the try/except clause.
+            # self._handle_top_level_args(parsed_args)
+            # self._emit_session_event()
+            aa = command_table[parsed_args.command]('remaining', parsed_args)
+        except Exception as e:
+            # sys.stderr.write("usage: %s\n" % USAGE)
+            sys.stderr.write(str(e))
+            sys.stderr.write("\n")
+            return 255
 
 def main(args=None):
     nws_arg_parser = NWSArgParser()
