@@ -47,6 +47,10 @@ class BaseNWSArgument(object):
         else:
             return '--' + self._name
 
+    @property
+    def documentation(self):
+        return self._help
+
     def add_to_parser(self, parser):
         kwargs = {}
         if self._dest is not None:
@@ -64,6 +68,9 @@ class BaseNWSArgument(object):
         if self._const is not None:
             kwargs['const'] = self._const
         parser.add_argument(self.arg_name, **kwargs)
+
+    def print_help(self):
+        print '       {0}   {1}'.format(self.arg_name, self.documentation)
 
 
 class CommandAction(argparse.Action):
@@ -95,6 +102,8 @@ class CommandAction(argparse.Action):
         pass
 
 class NWSCommand(object):
+    NAME=''
+    DESCRIPTION = ''
     # If your command has arguments, you can specify them here.  This is
     # somewhat of an implementation detail, but this is a list of dicts
     # where the dicts match the kwargs of the CustomArgument's __init__.
@@ -121,6 +130,10 @@ class NWSCommand(object):
     # ]
     # The command_class must subclass from ``BasicCommand``.
     SUBCOMMANDS = []
+
+    # If you want to provide some hand written examples, you can do
+    # so here.
+    EXAMPLES = ''
 
     def __init__(self):
         self._arg_table = None
@@ -157,9 +170,27 @@ class NWSCommand(object):
         # help_command = self.create_help_command()
         # help_command(parsed_args, parsed_globals)
         print '_display_help'
-        parser = NWSArgParser(command_table=self.subcommand_table,
-                              argument_table=self.arg_table, version_string='v0.1')
-        parser.print_help()
+        print 'NAME'
+        print '       {}\n'.format(self.NAME)
+        print 'DESCRIPTION'
+        print '       {}\n'.format(self.DESCRIPTION)
+        print 'SUBCOMMANDS'
+        for subcommand in self.SUBCOMMANDS:
+            subcommand_name = subcommand['name']
+            subcommand_class = subcommand['command_class']
+            print '       {0}   {1}\n'.format(subcommand_class.NAME, subcommand_class.DESCRIPTION)
+        if len(self.SUBCOMMANDS) is 0:
+            print ''
+
+        print 'ARGUMENTS'
+        arg_table = self.arg_table
+        for argument_name in arg_table:
+            argument_class = arg_table[argument_name]
+            argument_class.print_help()
+        print ''
+        print 'EXAMPLES'
+        print '       {0}'.format(self.EXAMPLES)
+
 
     @property
     def name(self):
@@ -199,11 +230,20 @@ class NWSCommand(object):
 
 #######################  Command 1
 class  LSCommand(NWSCommand):
+    NAME = 'LS'
+    DESCRIPTION = 'List all the things in the world.'
+    ARG_TABLE = [
+        {'name': 'ls-arg-one', 'positional_arg': False, 'help_text': 'This is ls argument.',
+         'action': 'store_true', },
+    ]
+
     def _run_main(self, parsed_args, parsed_globals):
         print 'LSCommand ls subcommand'
 
 class NWSDownloadCommand1(NWSCommand):
     print 'NWSDownloadCommand1'
+    NAME = 'CMD1'
+    DESCRIPTION = 'This is command one.\n     It is main command.'
     SUBCOMMANDS = [
         {'name': 'ls', 'command_class': LSCommand},
     ]
@@ -213,20 +253,25 @@ class NWSDownloadCommand1(NWSCommand):
         {'name': 'argument-two',  'positional_arg': False,'help_text': 'This argument does some other thing.',
          'action': 'store', 'default':'abc','choices': ['a', 'b', 'c']},
     ]
+    EXAMPLES = 'nws cmd1 ls'
 
     def _run_main(self, parsed_args, parsed_globals):
         print 'NWSDownloadCommand1 _run_main'
         if parsed_args.command is None:
-            raise ValueError("usage: aws [options] <command> <subcommand> "
-                             "[parameters]\naws: error: too few arguments")
+            raise ValueError("usage: nws [options] <command> <subcommand> "
+                             "[parameters]\nnws: error: too few arguments")
 
 #######################  Command 2
-class  CPCommand(object):
+class  CPCommand(NWSCommand):
+    NAME = 'CP'
+    DESCRIPTION = 'This is cp command.'
     def __call__(self, parsed_args, parsed_globals):
         print 'cmd2 cp subcommand'
 
 class NWSDownloadCommand2(NWSCommand):
     print 'NWSDownloadCommand2'
+    NAME = 'CMD2'
+    DESCRIPTION = 'This is command2.'
     SUBCOMMANDS = [
         {'name': 'cp', 'command_class': CPCommand},
     ]
@@ -247,11 +292,16 @@ class NWSArgParser(argparse.ArgumentParser):
         self._build(command_table, version_string, argument_table)
 
     def parse_known_args(self, args, namespace=None):
-        print 'parse_known_args'
-        print args
-        parsed, remaining = super(NWSArgParser, self).parse_known_args(args, namespace)
-        print parsed
-        print remaining
+        # print 'parse_known_args'
+        # print args
+        if len(args) == 1 and args[0] == 'help':
+            namespace = argparse.Namespace()
+            namespace.help = 'help'
+            return namespace, []
+        else:
+            return super(NWSArgParser, self).parse_known_args(args, namespace)
+        # print parsed
+        # print remaining
         # terminal_encoding = getattr(sys.stdin, 'encoding', 'utf-8')
         # if terminal_encoding is None:
         #     # In some cases, sys.stdin won't have an encoding set,
@@ -269,7 +319,7 @@ class NWSArgParser(argparse.ArgumentParser):
         #             else:
         #                 encoded.append(v)
         #         setattr(parsed, arg, encoded)
-        return parsed, remaining
+        # return parsed, remaining
 
     def _build(self, command_table, version_string, argument_table):
         for argument_name in argument_table:
