@@ -243,7 +243,7 @@ class  LSCommand(NWSCommand):
 class NWSDownloadCommand1(NWSCommand):
     print 'NWSDownloadCommand1'
     NAME = 'CMD1'
-    DESCRIPTION = 'This is command one.\n     It is main command.'
+    DESCRIPTION = 'This is command one. It is main command.'
     SUBCOMMANDS = [
         {'name': 'ls', 'command_class': LSCommand},
     ]
@@ -286,8 +286,8 @@ class NWSArgParser(argparse.ArgumentParser):
     def __init__(self, command_table, version_string,
                 argument_table, prog=None):
         super(NWSArgParser, self).__init__(
-            # add_help=False,
-            # usage=USAGE
+            add_help=False,
+            usage=USAGE
             )
         self._build(command_table, version_string, argument_table)
 
@@ -334,7 +334,27 @@ class NWSArgParser(argparse.ArgumentParser):
 
 
 
+def print_main_help(argument_table, command_table, examples=''):
+    print 'print_main_help'
+    sys.stderr.write("usage: %s\n" % USAGE)
+    print 'COMMANDS'
+    for subcommand in command_table:
+        # subcommand_name = subcommand['name']
+        subcommand_class = command_table[subcommand]
+        print '       {0}   {1}'.format(subcommand_class.NAME, subcommand_class.DESCRIPTION)
+    if len(command_table) is 0:
+        print ''
 
+    print 'ARGUMENTS'
+    for argument_name in argument_table:
+        argument_class = argument_table[argument_name]
+        argument_class.print_help()
+    print ''
+    print 'EXAMPLES'
+    print '       {0}'.format(examples)
+
+GLOBAL_ARGUMENTS = []
+EXAMPLES = 'nws cmd1 ls'
 
 def main(args=None):
     if args is None:
@@ -358,9 +378,12 @@ def main(args=None):
         # command table.  This is why it's in the try/except clause.
         # self._handle_top_level_args(parsed_args)
         # self._emit_session_event()
-        aa = command_table[parsed_args.command](remaining, parsed_args)
+        if len(args) == 1 and args[0] == 'help':
+            print_main_help(argument_table, command_table, EXAMPLES)
+        else:
+            return command_table[parsed_args.command](remaining, parsed_args)
     except Exception as e:
-        # sys.stderr.write("usage: %s\n" % USAGE)
+        sys.stderr.write("usage: %s\n" % USAGE)
         sys.stderr.write(str(e))
         sys.stderr.write("\n")
         return 255
