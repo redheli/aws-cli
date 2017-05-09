@@ -326,6 +326,10 @@ class NWSArgParser(argparse.ArgumentParser):
             argument = argument_table[argument_name]
             argument.add_to_parser(self)
 
+        self.add_argument('--version', action="version",
+                          version=version_string,
+                          help='Display the version of this tool')
+
         self.add_argument('command', action=CommandAction,
                                command_table=command_table, nargs='?')
 
